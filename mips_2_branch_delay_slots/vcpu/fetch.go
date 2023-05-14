@@ -1,10 +1,15 @@
-package main
+package vcpu
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/zni0/cpu_pipeline_simulator/lg"
+	"github.com/zni0/cpu_pipeline_simulator/utils"
+)
 
 func (Cpu *CPU) RunF() {
 
-	Logger := Logger{Stage: "F",
+	Logger := lg.Logger{Stage: "F",
 		CycleNo: Cpu.CycleNo}
 	Logger.Info("Started Fetch")
 	defer Logger.Info("Completed Fetch")
@@ -14,7 +19,7 @@ func (Cpu *CPU) RunF() {
 
 	if Cpu.Halt {
 		Logger.Info("CPU Halted")
-		DoneAndWait(Cpu.ReadLatchWG)
+		utils.DoneAndWait(Cpu.ReadLatchWG)
 		Cpu.AdjustWriteEnableSignals(input)
 		if Cpu.WriteEnableSignal[output] {
 			outputLatch.ValidBit = false
@@ -25,7 +30,7 @@ func (Cpu *CPU) RunF() {
 
 	pc := Cpu.ProgramCounter
 	Logger.Info("Read all inputs")
-	DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
+	utils.DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
 	// input latch / CPU registers should not be read after this point
 
 	instruction := Memory[pc]

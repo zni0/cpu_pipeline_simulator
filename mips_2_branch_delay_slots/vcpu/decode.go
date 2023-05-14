@@ -1,10 +1,16 @@
-package main
+package vcpu
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/zni0/cpu_pipeline_simulator/constants"
+	"github.com/zni0/cpu_pipeline_simulator/lg"
+	"github.com/zni0/cpu_pipeline_simulator/utils"
+)
 
 func (Cpu *CPU) RunD() {
 
-	Logger := Logger{Stage: "D",
+	Logger := lg.Logger{Stage: "D",
 		CycleNo: Cpu.CycleNo}
 	Logger.Info("Started Decode")
 	defer Logger.Info("Completed Decode")
@@ -15,7 +21,7 @@ func (Cpu *CPU) RunD() {
 
 	if inputLatch.ValidBit == false {
 		Logger.Info("Invalid Instruction (NOOP)")
-		DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
+		utils.DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
 		Cpu.AdjustWriteEnableSignals(input)
 		if Cpu.WriteEnableSignal[output] {
 			outputLatch.ValidBit = false
@@ -27,7 +33,7 @@ func (Cpu *CPU) RunD() {
 	pc := inputLatch.ProgramCounter
 	registerFilesATM := CloneMyRegFile(Cpu.RegisterFile)
 	Logger.Info("Read all inputs")
-	DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
+	utils.DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
 	// input latch / CPU registers should not be refered after this point
 	Logger.Info(fmt.Sprintf("Instruction: %s", instruction))
 
@@ -42,36 +48,36 @@ func (Cpu *CPU) RunD() {
 	}
 
 	var opCode, source1, source2, literal, destination, sourceReg1, sourceReg2 int
-	opCode, operand1, operand2, operand3 := decodeInstruction(instruction)
+	opCode, operand1, operand2, operand3 := utils.DecodeInstruction(instruction)
 	switch opCode {
-	case ADD, SUB, MUL:
+	case constants.ADD, constants.SUB, constants.MUL:
 		destination = operand1
 		source1 = registerFilesATM[operand2].Value
 		source2 = registerFilesATM[operand3].Value
 		sourceReg1 = operand2
 		sourceReg2 = operand3
 		literal = -1
-	case ADDI, SUBI:
+	case constants.ADDI, constants.SUBI:
 		destination = operand1
 		source1 = registerFilesATM[operand2].Value
 		source2 = -1
 		sourceReg1 = operand2
 		sourceReg2 = -1
 		literal = operand3
-	case MOVC:
+	case constants.MOVC:
 		destination = operand1
 		source1 = -1
 		source2 = -1
 		sourceReg1 = -1
 		sourceReg2 = -1
 		literal = operand2
-	case BEQ, BNE:
+	case constants.BEQ, constants.BNE:
 		source1 = registerFilesATM[operand1].Value
 		source2 = registerFilesATM[operand2].Value
 		sourceReg1 = operand1
 		sourceReg2 = operand2
 		literal = operand3
-	case NOOP:
+	case constants.NOOP:
 		destination = -1
 		source1 = -1
 		source2 = -1
@@ -96,7 +102,7 @@ func (Cpu *CPU) RunD() {
 	Cpu.AdjustWriteEnableSignals(input)
 	if Cpu.WriteEnableSignal[output] {
 		Logger.Info("Writing into D-E latch")
-		if opCode == NOOP {
+		if opCode == constants.NOOP {
 			Logger.Info(fmt.Sprintf("NOOP encountered, setting ValidBit of DE latch to false"))
 			outputLatch.ValidBit = false
 			return

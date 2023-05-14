@@ -1,6 +1,6 @@
-package main
+package vcpu
 
-func loadCode() {
+func LoadCode() {
 	Memory = []string{
 		"ADDI 10 10 1",
 		"ADDI 11 11 1",

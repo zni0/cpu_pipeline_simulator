@@ -1,10 +1,16 @@
-package main
+package vcpu
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/zni0/cpu_pipeline_simulator/constants"
+	"github.com/zni0/cpu_pipeline_simulator/lg"
+	"github.com/zni0/cpu_pipeline_simulator/utils"
+)
 
 func (Cpu *CPU) RunE() {
 
-	Logger := Logger{Stage: "E",
+	Logger := lg.Logger{Stage: "E",
 		CycleNo: Cpu.CycleNo}
 	Logger.Info("Started Execute")
 	defer Logger.Info("Completed Execute")
@@ -15,7 +21,7 @@ func (Cpu *CPU) RunE() {
 
 	if inputLatch.ValidBit == false {
 		Logger.Info("Invalid Instruction (NOOP)")
-		DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
+		utils.DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
 		Cpu.AdjustWriteEnableSignals(input)
 		if Cpu.WriteEnableSignal[output] {
 			outputLatch.ValidBit = false
@@ -33,29 +39,29 @@ func (Cpu *CPU) RunE() {
 	literal := inputLatch.Literal
 	opCode := inputLatch.OPCode
 	Logger.Info("Read all inputs")
-	DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
+	utils.DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
 	// input latch / CPU registers should not be refered after this point
 	Logger.Info(fmt.Sprintf("Instruction: %s", instruction))
 
 	// Logic for exec Stage
 	var aluOutPut int
 	switch opCode {
-	case ADD:
+	case constants.ADD:
 		aluOutPut = source1 + source2
-	case ADDI:
+	case constants.ADDI:
 		aluOutPut = source1 + literal
-	case SUB:
+	case constants.SUB:
 		aluOutPut = source1 - source2
-	case SUBI:
+	case constants.SUBI:
 		aluOutPut = source1 - literal
-	case MUL:
+	case constants.MUL:
 		aluOutPut = source1 * source2
-	case MOVC:
+	case constants.MOVC:
 		aluOutPut = literal + 0
-	case BEQ, BNE:
+	case constants.BEQ, constants.BNE:
 		Logger.Info("Control flow instruction")
-		if (opCode == BEQ && (source1 == source2)) ||
-			(opCode == BNE && (source1 != source2)) {
+		if (opCode == constants.BEQ && (source1 == source2)) ||
+			(opCode == constants.BNE && (source1 != source2)) {
 			Logger.Info("Branch Taken!")
 			Cpu.AdjustWriteEnableSignals(input)
 			Cpu.PCWG.Wait()                   // Wait till the Fetch state updates the PC and then over write it to branch

@@ -1,17 +1,22 @@
-package main
+package vcpu
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/zni0/cpu_pipeline_simulator/lg"
+	"github.com/zni0/cpu_pipeline_simulator/utils"
+)
 
 func (Cpu *CPU) RunW() {
 
-	Logger := Logger{Stage: "W",
+	Logger := lg.Logger{Stage: "W",
 		CycleNo: Cpu.CycleNo}
 	input := 4
 	inputLatch := Cpu.Stages[input]
 
 	if inputLatch.ValidBit == false {
 		Logger.Info("Invalid Instruction (NOOP)")
-		DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
+		utils.DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
 		Cpu.AdjustWriteEnableSignals(input)
 		return
 	}
@@ -23,7 +28,7 @@ func (Cpu *CPU) RunW() {
 	aluOutPut := inputLatch.ALUOutPut
 	instruction := inputLatch.Instruction
 	Logger.Info("Read all inputs")
-	DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
+	utils.DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
 	// input latch / CPU registers should not be refered after this point
 	Logger.Info(fmt.Sprintf("Instruction: %s", instruction))
 
