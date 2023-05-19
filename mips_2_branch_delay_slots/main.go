@@ -49,6 +49,7 @@ func Init() vcpu.CPU {
 
 	registerFile := [32]vcpu.Register{}
 	inputSignals := make([]bool, 5)
+	cyclesLeft := make([]int, 100)
 	fetchStage := vcpu.Stage{
 		ValidBit: true,
 	}
@@ -69,6 +70,7 @@ func Init() vcpu.CPU {
 		Halt:                  false,
 		WriteEnableSignal:     inputSignals,
 		WriteEnableMu:         &writeEnableMu,
+		CyclesLeft:            cyclesLeft,
 	}
 	return Cpu
 }
@@ -79,4 +81,5 @@ func main() {
 	vcpu.LoadCode()
 	// runEntireCode(&Cpu)
 	runCycleByCycle(&Cpu)
+	fmt.Println(Cpu.RegisterFile)
 }

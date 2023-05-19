@@ -18,6 +18,7 @@ type CPU struct {
 	WriteEnableCompleteWG *sync.WaitGroup
 	PCWG                  *sync.WaitGroup
 	Halt                  bool
+	CyclesLeft            []int
 }
 
 type Register struct {

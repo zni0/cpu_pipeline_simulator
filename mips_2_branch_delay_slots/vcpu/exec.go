@@ -14,6 +14,7 @@ func (Cpu *CPU) RunE() {
 		CycleNo: Cpu.CycleNo}
 	Logger.Info("Started Execute")
 	defer Logger.Info("Completed Execute")
+
 	input := 2  // DE Latch
 	output := 3 // EM Latch
 	inputLatch := Cpu.Stages[input]
@@ -29,6 +30,19 @@ func (Cpu *CPU) RunE() {
 		return
 	}
 
+	if Cpu.CyclesLeft[inputLatch.OPCode] > 1 {
+		//Stall
+		Logger.Info("Ongoing Instruction, Need to stall!")
+		Cpu.WriteEnableSignal[input] = false // Disable self's write enable so as to not loose the instruction
+		Cpu.AdjustWriteEnableSignals(input)
+		if Cpu.WriteEnableSignal[output] {
+			outputLatch.ValidBit = false
+		}
+		return
+	} else if Cpu.CyclesLeft[inputLatch.OPCode] == 1 {
+		Logger.Info("Instruction Completed in this cycle!")
+	}
+
 	instruction := inputLatch.Instruction
 	pc := inputLatch.ProgramCounter
 	destinationRegister := inputLatch.DestinationRegister
@@ -42,6 +56,16 @@ func (Cpu *CPU) RunE() {
 	utils.DoneAndWait(Cpu.ReadLatchWG) // Wait till all stages read registers
 	// input latch / CPU registers should not be refered after this point
 	Logger.Info(fmt.Sprintf("Instruction: %s", instruction))
+
+	// Set latency of each operation
+	if Cpu.CyclesLeft[inputLatch.OPCode] == 0 {
+		switch opCode {
+		case constants.MUL:
+			Cpu.CyclesLeft[opCode] = 2
+		default:
+			Cpu.CyclesLeft[opCode] = 1
+		}
+	}
 
 	// Logic for exec Stage
 	var aluOutPut int
@@ -88,11 +112,24 @@ func (Cpu *CPU) RunE() {
 		Logger.Error("Invalid Instruction")
 	}
 
-	// No need to stall so WriteEnabled stays true!
-	// In case of multiple cycle operations, we may need to stall and set WriteEnableSignal of input to 0 and stall
+	if Cpu.CyclesLeft[opCode] > 1 {
+		Cpu.CyclesLeft[opCode] -= 1
+		Logger.Info(fmt.Sprintf("Running instruction: %s, %d cycles left",
+			instruction, Cpu.CyclesLeft[opCode]))
+		// Stall
+		Logger.Info("Need to stall!")
+		Cpu.WriteEnableSignal[input] = false // Disable self's write enable so as to not loose the instruction
+		Cpu.AdjustWriteEnableSignals(input)
+		if Cpu.WriteEnableSignal[output] {
+			outputLatch.ValidBit = false
+		}
+		return
+	}
+
 	Cpu.AdjustWriteEnableSignals(input)
 	// Write to memoryAccessStage
 	if Cpu.WriteEnableSignal[output] {
+		Cpu.CyclesLeft[opCode] = 0
 		Logger.Info("Writing into E-M latch")
 		outputLatch.ValidBit = true
 		outputLatch.ALUOutPut = aluOutPut
